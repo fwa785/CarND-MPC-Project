@@ -127,7 +127,7 @@ int main() {
           // Use delay to adjust the Initial state          
           double delta = j[1]["steering_angle"];
           double a = j[1]["throttle"];          
-          double delay = 0.05; // 100ms delay
+          double delay = 0.05; // 50ms delay
           double Lf = 2.67;
           
           px = v * delay;

@@ -7,7 +7,7 @@ using CppAD::AD;
 
 // Set the timestep length and duration
 size_t N = 10;
-double dt = 0.1;
+double dt = 0.05;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -23,7 +23,7 @@ const double Lf = 2.67;
 
 // Both the reference cross track and orientation errors are 0.
 // The reference velocity is set to 60 mph.
-double ref_v = 60;
+double ref_v = 80;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
