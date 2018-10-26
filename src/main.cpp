@@ -100,13 +100,42 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+
+          // First convert ptsx and ptsy to the car's coordinate system
+          // Because this way, it's easier to defined CTE as the the difference
+          // of y, and that is the drift from the center of the desired path
           
+          for (size_t i = 0; i < ptsx.size(); i ++) {
+            double x_diff = ptsx[i] - px;
+            double y_diff = ptsy[i] - py;
+            
+            ptsx[i] = x_diff * cos(-psi) - y_diff * sin(-psi);
+            ptsy[i] = y_diff * cos(-psi) + x_diff * sin(-psi);
+          }
+          // Now set px, py and psi to 0 because they should also be car coordinate
+          // based
+          px = 0;
+          py = 0;
+          psi = 0;
+  
           VectorXd xvals = VectorXd::Map(&ptsx[0], ptsx.size());
           VectorXd yvals = VectorXd::Map(&ptsy[0], ptsy.size());
     
           // Fit x and y on order 3 polynomial curve
           auto coeffs = polyfit(xvals, yvals, 3); 
-           
+#if 0
+          // Use delay to adjust the Initial state          
+          double delta = j[1]["steering_angle"];
+          double a = j[1]["throttle"];          
+          double delay = 0; // 100ms delay
+          double Lf = 2.67;
+          
+          delta = -delta;
+          px = v * delay;
+          py = 0;
+          psi = -v/Lf * delta * delay;
+          v = v + a * delay;
+#endif          
           // The cross track error is calculated by evaluating at polynomial at x, f(x)
           // and subtracting y.
           double cte = polyeval(coeffs, px) - py;
@@ -114,6 +143,7 @@ int main() {
           // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
           double epsi = psi - atan(polyderivative(coeffs, px));
     
+          
           // Initialize the state 
           VectorXd state(6);
           state << px, py, psi, v, cte, epsi;
@@ -143,7 +173,7 @@ int main() {
 
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].          
-          msgJson["steering_angle"] = steer_value/(deg2rad(25));
+          msgJson["steering_angle"] = -steer_value/(deg2rad(25));
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
@@ -154,8 +184,8 @@ int main() {
             double mpc_x = vars[i];
             double mpc_y = vars[i+1];
             /* convert to car's coordinate */
-            mpc_x_vals.push_back((mpc_x - px) * cos(psi) + (mpc_y - py) * sin(psi));
-            mpc_y_vals.push_back((mpc_y - py) * cos(psi) - (mpc_x - px) * sin(psi));
+            mpc_x_vals.push_back(mpc_x);
+            mpc_y_vals.push_back(mpc_y);
           }
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -169,8 +199,8 @@ int main() {
           
           for (size_t i = 0; i < ptsx.size(); i ++) {
             /* Convert to car's coordinate */
-            next_x_vals.push_back((ptsx[i] - px) * cos(psi) + (ptsy[i] - py) * sin(psi));
-            next_y_vals.push_back((ptsy[i] - py) * cos(psi) - (ptsx[i] - px) * sin(psi));
+            next_x_vals.push_back(ptsx[i]);
+            next_y_vals.push_back(ptsy[i]);
           }
           
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
