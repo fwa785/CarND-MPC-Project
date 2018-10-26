@@ -123,19 +123,18 @@ int main() {
     
           // Fit x and y on order 3 polynomial curve
           auto coeffs = polyfit(xvals, yvals, 3); 
-#if 0
+
           // Use delay to adjust the Initial state          
           double delta = j[1]["steering_angle"];
           double a = j[1]["throttle"];          
-          double delay = 0; // 100ms delay
+          double delay = 0.05; // 100ms delay
           double Lf = 2.67;
           
-          delta = -delta;
           px = v * delay;
           py = 0;
           psi = -v/Lf * delta * delay;
           v = v + a * delay;
-#endif          
+          
           // The cross track error is calculated by evaluating at polynomial at x, f(x)
           // and subtracting y.
           double cte = polyeval(coeffs, px) - py;
