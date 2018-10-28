@@ -100,7 +100,18 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
-
+          
+          // Use delay to adjust the Initial state          
+          double delta = j[1]["steering_angle"];
+          double a = j[1]["throttle"];          
+          double delay = 0.1; 
+          double Lf = 2.67;
+        
+          px = px + v * cos(psi) * delay;
+          py = py + v * sin(psi) * delay;
+          psi = psi - v/Lf * delta * delay;
+          v = v + a * delay;
+          
           // First convert ptsx and ptsy to the car's coordinate system
           // Because this way, it's easier to defined CTE as the the difference
           // of y, and that is the drift from the center of the desired path
@@ -123,17 +134,6 @@ int main() {
     
           // Fit x and y on order 3 polynomial curve
           auto coeffs = polyfit(xvals, yvals, 3); 
-
-          // Use delay to adjust the Initial state          
-          double delta = j[1]["steering_angle"];
-          double a = j[1]["throttle"];          
-          double delay = 0.05; // 100ms delay
-          double Lf = 2.67;
-          
-          px = v * delay;
-          py = 0;
-          psi = -v/Lf * delta * delay;
-          v = v + a * delay;
           
           // The cross track error is calculated by evaluating at polynomial at x, f(x)
           // and subtracting y.
@@ -141,22 +141,11 @@ int main() {
           // Due to the sign starting at 0, the orientation error is -f'(x).
           // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
           double epsi = psi - atan(polyderivative(coeffs, px));
-    
-          
+              
           // Initialize the state 
           VectorXd state(6);
           state << px, py, psi, v, cte, epsi;
-
-          std::vector<double> x_vals = {state[0]};
-          std::vector<double> y_vals = {state[1]};
-          std::vector<double> psi_vals = {state[2]};
-          std::vector<double> v_vals = {state[3]};
-          std::vector<double> cte_vals = {state[4]};
-          std::vector<double> epsi_vals = {state[5]};
-          std::vector<double> delta_vals = {};
-          std::vector<double> a_vals = {}; 
-          
-          
+                    
           /*
           * Calculate steering angle and throttle using MPC.
           *
@@ -182,7 +171,6 @@ int main() {
           for (size_t i = 2; i < vars.size(); i +=2) {
             double mpc_x = vars[i];
             double mpc_y = vars[i+1];
-            /* convert to car's coordinate */
             mpc_x_vals.push_back(mpc_x);
             mpc_y_vals.push_back(mpc_y);
           }
@@ -197,7 +185,6 @@ int main() {
           vector<double> next_y_vals;
           
           for (size_t i = 0; i < ptsx.size(); i ++) {
-            /* Convert to car's coordinate */
             next_x_vals.push_back(ptsx[i]);
             next_y_vals.push_back(ptsy[i]);
           }
@@ -211,6 +198,7 @@ int main() {
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
+          
           // Latency
           // The purpose is to mimic real driving conditions where
           // the car does actuate the commands instantly.

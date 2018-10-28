@@ -7,7 +7,7 @@ using CppAD::AD;
 
 // Set the timestep length and duration
 size_t N = 8;
-double dt = 0.1;
+double dt = 0.05;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -23,7 +23,7 @@ const double Lf = 2.67;
 
 // Both the reference cross track and orientation errors are 0.
 // The reference velocity is set to 60 mph.
-double ref_v = 60;
+double ref_v = 80;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -72,23 +72,21 @@ class FG_eval {
 
     // The part of the cost based on the reference state.
     for (t = 0; t < N; t++) {
-      fg[0] += 3000 * CppAD::pow(vars[cte_start + t], 2);
-      fg[0] += 3000 * CppAD::pow(vars[epsi_start + t], 2);
-      fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
+      fg[0] += 20 * CppAD::pow(vars[cte_start + t], 2);
+      fg[0] += 20 * CppAD::pow(vars[epsi_start + t], 2);
+      fg[0] += 0.4 * CppAD::pow(vars[v_start + t] - ref_v, 2);
     }
 
     // Minimize the use of actuators.
     for (t = 0; t < N - 1; t++) {
-      fg[0] += 100 * CppAD::pow(vars[delta_start + t], 2);
+      fg[0] += 8000 * CppAD::pow(vars[delta_start + t], 2);
       fg[0] += 5 * CppAD::pow(vars[a_start + t], 2);
-      // when the speed is high, the delta can't be too high
-      fg[0] += 100*CppAD::pow((vars[t + v_start] * vars[t + delta_start]), 2);
     }
 
     // Minimize the value gap between sequential actuations.
     for (t = 0; t < N - 2; t++) {
-      fg[0] += 400 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-      fg[0] += 10 * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+      fg[0] += 4000 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
+      fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
 
     // Setup Constraints
@@ -126,10 +124,6 @@ class FG_eval {
       // Only consider the actuation at time t.
       AD<double> delta0 = vars[delta_start + t - 1];
       AD<double> a0 = vars[a_start + t - 1];
-      if (t > 1) {
-        AD<double> delta0 = vars[delta_start + t - 2];
-        AD<double> a0 = vars[a_start + t - 2];        
-      }
       
       AD<double> f0 = polyeval(coeffs, x0);
       AD<double> psides0 = CppAD::atan(polyderivative(coeffs, x0));
@@ -262,9 +256,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // magnitude.
   options += "Sparse  true        forward\n";
   options += "Sparse  true        reverse\n";
-  // NOTE: Currently the solver has a maximum time limit of 0.5 seconds.
+  // NOTE: Currently the solver has a maximum time limit of 0.1 seconds.
   // Change this as you see fit.
-  options += "Numeric max_cpu_time          0.5\n";
+  options += "Numeric max_cpu_time          0.1\n";
 
   // place to return solution
   CppAD::ipopt::solve_result<Dvector> solution;
@@ -280,6 +274,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Cost
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
+  std::cout << "OK " << ok << std::endl;
   
   // Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
