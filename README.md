@@ -30,10 +30,13 @@ And it defines the time duration of the model(T) and the timesteps(dt) used in t
 ### Polynomial Fitting
 
 The waypoints are provided by the simulator. It is the reference trajectory of the vehicle. The trajectory is curved, so I use 3rd order polynomial function to fit the waypoint. The coefficients of the polynomial function are found by the fitting so that:
+
 $$
 polyeval(coeff, x) = coeff_{0} + coeff_{1}\times x + coeff_{2}\times x^2 + coeff_{3}\times x^3
 $$
- The angle of the reference trajectory at each point is:
+
+The angle of the reference trajectory at each point is:
+
 $$
 polyderivative(coeff, x) = coeff_{1} + 2\times coeff_{2}x + 3\times coeff_{3}x^2
 $$
@@ -49,9 +52,11 @@ The waypoints are transformed into the vehicle's coordinate system before it's b
 The state information provided by the simulator is for the map coordinate system. However, it is easy to process the information in the vehicle's coordinate system. For example, CTE is defined as the difference between the vehicle's current position and the reference trajectory. If we transform the states into the vehicle's coordinate system, then the initial orientation of the vehicle is always point to x axis, and CTE can be defined as simple as the difference of the desired y position and the actual vehicle's y position.
 
 Therefore, before we start processing the information, the waypoints, the vehicle's states: px, py, v and psi are all converted into the vehicle's coordinates. Below is the transformation equation:
+
 $$
 {x_{c}=(x_{m} - px)*cos(-psi) - (y_{m} - py)*sin(-psi)}
 $$
+
 $$
 {y_{c}=(y_{m} - py)*cos(-psi) + (x_{m} - px)*sin(-psi)}
 $$
@@ -59,10 +64,13 @@ $$
 After the transformation, the vehicle's state px, py and psi all become 0.
 
 The CTE is defined as:
+
 $$
 cte = polyeval(coeff, px) - py
 $$
+
 And the epsi is defined as:
+
 $$
 epsi = psi - atan(polyderivative(coeff, px))
 $$
@@ -70,6 +78,7 @@ $$
 ### Model
 
 The model takes the initial state of px, py, v, psi, cte, and epsi and coefficients as the input. It defines the equations to calculate the states on the next timestep as following:
+
 $$
 x_{t+1} = x_{t} + v_{t} \times cos(psi_{t}) \times dt
 $$
@@ -93,6 +102,7 @@ $$
 $$
 epsi_{t+1} = psi_{t} - atan(polyderivative(coeff, x_{t})) + \frac{v_{t}}{L_{f}}\times delta_{t}\times dt
 $$
+
 #### Constraints
 
 There is no constraints for the states, although in the code, they're defined as constrained between the minimum double value and the maximum double value. It's mainly for the coding purpose.
@@ -106,46 +116,46 @@ The orientation change(delta) is constrained between -25 degree and 25 degree, s
 The cost of the model is defined in the following components:
 
 * The deviation of cte from 0 with a weight of 15. The weight for cte is not very high because it's OK to derivate from the reference trajectory as long as the vehicle still stay within the track. I found out that if I set the cte's weight too high, the model tried hard to stay on the reference trajectory by steering the vehicle very frequently
-  $$
+
+$$
   15 \times cte^2
-  $$
+$$
 
 * The deviation of epsi from 0 with a weight of 15.  Same reason for the cte, it doesn't need to have high weight.
-  $$
+
+$$
   15 \times epsi^2
-  $$
+$$
 
 * The deviation of velocity from the reference velocity 100 mph.
-  $$
+
+$$
   (v-v_{ref})^2
-  $$
+$$
 
 * The deviation of delta from 0 with a weight of 16000. Because the delta is small after converted to radians, and we'd like to minimize unnecessary orientation changes, I gave delta very high weight.
-  $$
+
+$$
   16000 \times delta^2
-  $$
+$$
 
 * The deviation of a from 0 with a weight of 10.
-  $$
+
+$$
   10 \times a^2
-  $$
+$$
 
 * The change of delta in each timestep with a weight of 8000. It's critical not to let the vehicle's steering change too quick.
-  $$
+
+$$
   8000 \times (delta_{t+1} - delta_{t})^2
-  $$
+$$
 
 * The change of a in each timestep.
-  $$
+
+$$
   (a_{t-1} - a_{t})^2
-  $$
-
-
-
-
-
-
-
+$$
 
 ### Duration
 
@@ -154,15 +164,19 @@ The MPC model defines time duration(T) for the prediction and the timestep(dt). 
 ### Latency
 
 There is a delay from the time the vehicle sends the information to the time the vehicle receives the control information. In this project, 100ms latency is simulated. So we need to adjust the initial states with the latency, or the control values determined by the model won't work well with the state 100ms later, especially if the vehicle drives with high speed, steering or acceleration. The initial state of the vehicle is adjusted with the follow equation so it uses the state 100ms later as the initial state.
+
 $$
 px = px + v \times cos(psi) \times delay
 $$
+
 $$
 py = py + v \times sin(psi) \times delay
 $$
+
 $$
 psi = psi - \frac{v}{L_{f}} \times delta \times delay
 $$
+
 $$
 v = v + a \times delay
 $$
